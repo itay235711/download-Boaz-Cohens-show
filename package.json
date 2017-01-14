@@ -1,0 +1,19 @@
+{
+  "name": "download_boaz_cohens_show",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.4.7",
+    "promise": "^7.1.1",
+    "promise-denodeify": "^1.2.2",
+    "underscore-node": "^0.1.2",
+    "youtube-dl": "^1.11.1",
+    "youtube-node": "^1.3.0"
+  }
+}
