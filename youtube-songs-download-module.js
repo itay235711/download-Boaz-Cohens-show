@@ -70,7 +70,6 @@ module.exports = function () {
     }
 
     function startDownloadYtVideosUrls(videoUrls) {
-        throw new Error('errorrrr');
         const videoDownloadPromises = [];
         _.each(videoUrls, function (url) {
             const deff = deferred();
