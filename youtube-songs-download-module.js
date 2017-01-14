@@ -4,11 +4,11 @@
 const _ = require('underscore-node');
 const fs = require('fs');
 const youtubeDl = require('youtube-dl');
-const YoutubeApi = require("youtube-node");
-// const Promise = require('promise');
+let YoutubeApi;
 const Promise = require("bluebird");
 const denodeify = require('promise-denodeify');
 const deferred = require('deferred');
+const FfmpegCommand = require('fluent-ffmpeg');
 
 initCallbacksBehavior();
 
@@ -16,28 +16,44 @@ module.exports = function () {
     // public
     const module = {
         setOutputDir: setOutputDir,
+        setMaxYtSearchResultsNumber : setMaxYtSearchResultsNumber,
         downloadSongsList: downloadSongsList
     };
 
     // private
-    let outputDir;
+    let _outputDir;
+    let _maxYtSearchResultsNumber = 3;
     const YOUTUBE_URL = 'https://www.youtube.com';
+    const FFMPEG_PATH = '.\\ffmpeg\\ffmpeg-20170112-6596b34-win64-static\\bin\\ffmpeg.exe';
 
     function setOutputDir(outputDirPath) {
         if (!fs.existsSync(outputDirPath)){
             fs.mkdirSync(outputDirPath);
         }
-        outputDir = outputDirPath;
+        _outputDir = outputDirPath;
+
+        return module;
+    }
+
+    function setMaxYtSearchResultsNumber(maxNumber) {
+        _maxYtSearchResultsNumber = maxNumber;
+
+        return module;
     }
 
     function downloadSongsList(songsList) {
         if (!songsList || !Array.isArray(songsList)) {
-            return;
+            return createRejectPromise(new Error("'songsList' must be an array"));
         }
+        else {
+            const downloadPromises = [];
+            for (let i = 0; i < songsList.length; i++) {
+                const songTitle = songsList[i];
+                const songPromise = downloadSong(songTitle);
+                downloadPromises.push(songPromise);
+            }
 
-        for (let i = 0; i < songsList.length; i++) {
-            const songTitle = songsList[i];
-            downloadSong(songTitle);
+            return Promise.all(downloadPromises);
         }
     }
 
@@ -46,54 +62,62 @@ module.exports = function () {
         const youtubeApi = new YoutubeApi();
         youtubeApi.setKey('AIzaSyB1OOSpTREs85WUMvIgJvLTZKye4BVsoFU');
 
-        youtubeApi.search(songTitle, 3, function(error, result) {
-            if (error) {
-                console.log(error);
-            }
-            else {
-                const videoUrls = _.map(result.items, function (itm) {
-                    const url = formatVideoUrl(itm.id.videoId);
-                    return url;
+        youtubeApi.search(songTitle, _maxYtSearchResultsNumber).then(function(result) {
+            const videoUrls = _.map(result.items, function (itm) {
+                const url = formatVideoUrl(itm.id.videoId);
+                return url;
+            });
+
+            const videoDownloadPromises = [];
+            _.each(videoUrls, function (url) {
+                const deff = deferred();
+                videoDownloadPromises.push(deff.promise);
+
+                const downloadEntry = youtubeDl(url,  ['--format=18']);
+
+                downloadEntry.on('info', function (info) {
+                    deff.resolve({info: info, downloadEntry: downloadEntry});
                 });
+            });
 
-                const videoDownloadPromises = [];
-                _.each(videoUrls, function (url) {
-                    const deff = deferred();
-                    videoDownloadPromises.push(deff.promise);
+            return Promise.all(videoDownloadPromises);
 
-                    const downloadEntry = youtubeDl(url, ['-x', '--audio-format', 'mp3']);
+        }).then(videosDownload => {
 
-                    downloadEntry.on('info', function(info) {
-                        deff.resolve({ info : info, downloadEntry : downloadEntry });
-                    });
-                });
+            let bestQualityVideo = undefined;
+            let bestQualityVideoSize = -1;
 
-                Promise.all(videoDownloadPromises).then(videosDownload => {
+            _.each(videosDownload, function (videosDownload) {
+                if (videosDownload.info.size > bestQualityVideoSize) {
+                    bestQualityVideo = videosDownload;
+                    bestQualityVideoSize = videosDownload.info.size;
+                }
+            });
 
-                    let bestQualityVideo = undefined;
-                    let bestQualityVideoSize = -1;
+            const outputFilePath = _outputDir + '\\' + bestQualityVideo.info.title + '.mp3';
 
-                    _.each(videosDownload, function (videosDownload) {
-                        if (videosDownload.info.size > bestQualityVideoSize) {
-                            bestQualityVideo = videosDownload;
-                            bestQualityVideoSize = videosDownload.info.size;
-                        }
-                    });
+            const deff = deferred();
 
-                    const outputFilePath = outputDir + '\\' + bestQualityVideo.info.title + '.mp4';
-                    const outputStream = fs.createWriteStream(outputFilePath);
-                    bestQualityVideo.downloadEntry.pipe(outputStream);
+            const converter = new FfmpegCommand({source: bestQualityVideo.downloadEntry});
 
-                    const deff = deferred();
-                    outputStream.on('finish', deff.resolve);
+            const FIX_WRONG_DURATION_FLAG = '-write_xing 0';
+            converter
+                .setFfmpegPath(FFMPEG_PATH)
+                .outputOptions(FIX_WRONG_DURATION_FLAG);
 
-                    return deff.promise;
-                }).then(() => {
-                    console.log("Finished download '" + songTitle + "'");
-                    completeProcessDef.resolve();
-                });
-            }
-        });
+            converter
+                .on('end', deff.resolve)
+                .on('error', function (err) {
+                    deff.reject(err);
+                })
+                .saveToFile(outputFilePath);
+
+            return deff.promise;
+
+        }).then(() => {
+                console.log("Finished download '" + songTitle + "'");
+                completeProcessDef.resolve();
+            });
 
         return completeProcessDef.promise;
     }
@@ -102,14 +126,26 @@ module.exports = function () {
         return YOUTUBE_URL + '/watch?v=' + videoKey.replace(/"/g, '');
     }
 
+    function createRejectPromise(error) {
+        const errorDef = deferred();
+        errorDef.reject(error);
+        return errorDef.promise;
+    }
+
     return module;
 };
 
 function initCallbacksBehavior() {
     youtubeDl.getInfo = denodeify(youtubeDl.getInfo, Promise, false);
 
+    YoutubeApi = function () {
+        const apiInstace = new (require("youtube-node"))();
+        apiInstace.search = denodeify(apiInstace.search, Promise, false);
+
+        return apiInstace;
+    };
+
     Promise.onPossiblyUnhandledRejection(function(error){
         throw error;
     });
 }
-
