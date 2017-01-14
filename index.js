@@ -7,6 +7,9 @@ const ysd = require('./youtube-songs-download-module.js')();
 ysd.setOutputDir('C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\')
     .setMaxYtSearchResultsNumber(3);
 
-ysd.downloadSongsList(['מיליון כוכבים', 'yesterday']).then(() => {
+ysd.downloadSongsList(['בא לי מקופלת', 'yesterday']).then(() => {
     process.exit(0);
+}).catch(err => {
+    console.log(err)
+    process.exit(1);
 });

@@ -6,8 +6,8 @@ const fs = require('fs');
 const youtubeDl = require('youtube-dl');
 let YoutubeApi;
 const Promise = require("bluebird");
-const denodeify = require('promise-denodeify');
 const deferred = require('deferred');
+const denodeify = require('promise-denodeify');
 const FfmpegCommand = require('fluent-ffmpeg');
 
 initCallbacksBehavior();
@@ -19,12 +19,6 @@ module.exports = function () {
         setMaxYtSearchResultsNumber : setMaxYtSearchResultsNumber,
         downloadSongsList: downloadSongsList
     };
-
-    // private
-    let _outputDir;
-    let _maxYtSearchResultsNumber = 3;
-    const YOUTUBE_URL = 'https://www.youtube.com';
-    const FFMPEG_PATH = '.\\ffmpeg\\ffmpeg-20170112-6596b34-win64-static\\bin\\ffmpeg.exe';
 
     function setOutputDir(outputDirPath) {
         if (!fs.existsSync(outputDirPath)){
@@ -43,7 +37,7 @@ module.exports = function () {
 
     function downloadSongsList(songsList) {
         if (!songsList || !Array.isArray(songsList)) {
-            return createRejectPromise(new Error("'songsList' must be an array"));
+            return rejectPromise(new Error("'songsList' must be an array"));
         }
         else {
             const downloadPromises = [];
@@ -57,80 +51,114 @@ module.exports = function () {
         }
     }
 
+    // privates
     function downloadSong(songTitle) {
-        const completeProcessDef = deferred();
-        const youtubeApi = new YoutubeApi();
-        youtubeApi.setKey('AIzaSyB1OOSpTREs85WUMvIgJvLTZKye4BVsoFU');
+        const songDownloadDef = deferred();
 
-        youtubeApi.search(songTitle, _maxYtSearchResultsNumber).then(function(result) {
-            const videoUrls = _.map(result.items, function (itm) {
-                const url = formatVideoUrl(itm.id.videoId);
-                return url;
-            });
+        searchYtByTitle(songTitle)
+        .then(mapResultsToYtVideosUrls)
+        .then(startDownloadYtVideosUrls)
+        .then(chooseBestQualityVideo)
+        .then(convertVideoToMp3AndOutputToDir)
+        .then(() => {
+            console.log("Finished download '" + songTitle + "'");
+            songDownloadDef.resolve();
+        })
+        .catch(songDownloadDef.reject);
 
-            const videoDownloadPromises = [];
-            _.each(videoUrls, function (url) {
-                const deff = deferred();
-                videoDownloadPromises.push(deff.promise);
+        return songDownloadDef.promise;
+    }
 
-                const downloadEntry = youtubeDl(url,  ['--format=18']);
-
-                downloadEntry.on('info', function (info) {
-                    deff.resolve({info: info, downloadEntry: downloadEntry});
-                });
-            });
-
-            return Promise.all(videoDownloadPromises);
-
-        }).then(videosDownload => {
-
-            let bestQualityVideo = undefined;
-            let bestQualityVideoSize = -1;
-
-            _.each(videosDownload, function (videosDownload) {
-                if (videosDownload.info.size > bestQualityVideoSize) {
-                    bestQualityVideo = videosDownload;
-                    bestQualityVideoSize = videosDownload.info.size;
-                }
-            });
-
-            const outputFilePath = _outputDir + '\\' + bestQualityVideo.info.title + '.mp3';
-
+    function startDownloadYtVideosUrls(videoUrls) {
+        throw new Error('errorrrr');
+        const videoDownloadPromises = [];
+        _.each(videoUrls, function (url) {
             const deff = deferred();
+            videoDownloadPromises.push(deff.promise);
 
-            const converter = new FfmpegCommand({source: bestQualityVideo.downloadEntry});
+            const downloadEntry = youtubeDl(url, ['--format=18']);
 
-            const FIX_WRONG_DURATION_FLAG = '-write_xing 0';
-            converter
-                .setFfmpegPath(FFMPEG_PATH)
-                .outputOptions(FIX_WRONG_DURATION_FLAG);
-
-            converter
-                .on('end', deff.resolve)
-                .on('error', function (err) {
-                    deff.reject(err);
-                })
-                .saveToFile(outputFilePath);
-
-            return deff.promise;
-
-        }).then(() => {
-                console.log("Finished download '" + songTitle + "'");
-                completeProcessDef.resolve();
+            downloadEntry.on('info', function (info) {
+                deff.resolve({info: info, downloadEntry: downloadEntry});
             });
+        });
 
-        return completeProcessDef.promise;
+        return Promise.all(videoDownloadPromises);
+    }
+
+    function mapResultsToYtVideosUrls(result) {
+        const videoUrls = _.map(result.items, function (itm) {
+            const url = formatVideoUrl(itm.id.videoId);
+            return url;
+        });
+
+        return valuePromise(videoUrls);
+    }
+
+    function chooseBestQualityVideo(videosDownload) {
+        let bestQualityVideo = undefined;
+        let bestQualityVideoSize = -1;
+
+        _.each(videosDownload, function (videosDownload) {
+            if (videosDownload.info.size > bestQualityVideoSize) {
+                bestQualityVideo = videosDownload;
+                bestQualityVideoSize = videosDownload.info.size;
+            }
+        });
+
+        return valuePromise(bestQualityVideo);
+    }
+
+    function convertVideoToMp3AndOutputToDir(bestQualityVideo) {
+
+        const outputFilePath = _outputDir + '\\' + bestQualityVideo.info.title + '.mp3';
+        const converter = new FfmpegCommand({source: bestQualityVideo.downloadEntry});
+
+        const FIX_WRONG_DURATION_FLAG = '-write_xing 0';
+        converter
+            .setFfmpegPath(FFMPEG_PATH)
+            .outputOptions(FIX_WRONG_DURATION_FLAG);
+
+        const def = deferred();
+        converter
+            .on('end', def.resolve)
+            .on('error', def.reject)
+            .saveToFile(outputFilePath);
+
+        return def.promise;
+    }
+
+    function searchYtByTitle(songTitle) {
+        const youtubeApi = new YoutubeApi();
+        youtubeApi.setKey(YOUTUBE_API_KEY);
+
+        const searchPromise = youtubeApi.search(songTitle, _maxYtSearchResultsNumber);
+        return searchPromise;
     }
 
     function formatVideoUrl(videoKey) {
         return YOUTUBE_URL + '/watch?v=' + videoKey.replace(/"/g, '');
     }
 
-    function createRejectPromise(error) {
+    function valuePromise(val) {
+        const retDef = deferred();
+        retDef.resolve(val);
+
+        return retDef.promise;
+    }
+
+    function rejectPromise(error) {
         const errorDef = deferred();
         errorDef.reject(error);
         return errorDef.promise;
     }
+
+    // members
+    let _outputDir;
+    let _maxYtSearchResultsNumber = 3;
+    const YOUTUBE_URL = 'https://www.youtube.com';
+    const YOUTUBE_API_KEY = 'AIzaSyB1OOSpTREs85WUMvIgJvLTZKye4BVsoFU';
+    const FFMPEG_PATH = '.\\ffmpeg\\ffmpeg-20170112-6596b34-win64-static\\bin\\ffmpeg.exe';
 
     return module;
 };
