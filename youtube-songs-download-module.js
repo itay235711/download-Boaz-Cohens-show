@@ -8,8 +8,9 @@ const YoutubeApi = require("youtube-node");
 // const Promise = require('promise');
 const Promise = require("bluebird");
 const denodeify = require('promise-denodeify');
+const deferred = require('deferred');
 
-initCallbacksBehavoir();
+initCallbacksBehavior();
 
 module.exports = function () {
     // public
@@ -41,6 +42,7 @@ module.exports = function () {
     }
 
     function downloadSong(songTitle) {
+        const completeProcessDef = deferred();
         const youtubeApi = new YoutubeApi();
         youtubeApi.setKey('AIzaSyB1OOSpTREs85WUMvIgJvLTZKye4BVsoFU');
 
@@ -49,54 +51,65 @@ module.exports = function () {
                 console.log(error);
             }
             else {
-                const videosYtKeys = _.map(result.items, function (itm) {
-                    return itm.id.videoId;
+                const videoUrls = _.map(result.items, function (itm) {
+                    const url = formatVideoUrl(itm.id.videoId);
+                    return url;
                 });
 
-                // const videoDownload = youtubedl('http://www.youtube.com/watch?v=90AiXO1pAiA',
-                //     ['--format=18']);
+                const videoDownloadPromises = [];
+                _.each(videoUrls, function (url) {
+                    const deff = deferred();
+                    videoDownloadPromises.push(deff.promise);
 
-                const promises = [];
-                let bestQualityVideo = { size : -1 };
-                _.each(videosYtKeys, function (videoKey) {
-                    const videoUrl = formatVideoUrl(videoKey);
-                    let info = youtubeDl.getInfo(videoUrl, []);
-                    promises.push(info);
+                    const downloadEntry = youtubeDl(url, ['-x', '--audio-format', 'mp3']);
+
+                    downloadEntry.on('info', function(info) {
+                        deff.resolve({ info : info, downloadEntry : downloadEntry });
+                    });
                 });
 
-                Promise.all(promises).then(function (videoInfosPromises) {
-                    let x = 1;
-                    throw Error('hi');
-                    x = 2;
-                }).catch(function (error) {
-                    let x = 3;
-                });
+                Promise.all(videoDownloadPromises).then(videosDownload => {
 
-            // .then(function (err, info) {
-            //         if (err)
-            //             throw err;
-            //
-            //         if (info.size > bestQualityVideo.size){
-            //             bestQualityVideo = info;
-            //         }
-            //     });
-                var x = 1;
+                    let bestQualityVideo = undefined;
+                    let bestQualityVideoSize = -1;
+
+                    _.each(videosDownload, function (videosDownload) {
+                        if (videosDownload.info.size > bestQualityVideoSize) {
+                            bestQualityVideo = videosDownload;
+                            bestQualityVideoSize = videosDownload.info.size;
+                        }
+                    });
+
+                    const outputFilePath = outputDir + '\\' + bestQualityVideo.info.title + '.mp4';
+                    const outputStream = fs.createWriteStream(outputFilePath);
+                    bestQualityVideo.downloadEntry.pipe(outputStream);
+
+                    const deff = deferred();
+                    outputStream.on('finish', deff.resolve);
+
+                    return deff.promise;
+                }).then(() => {
+                    console.log("Finished download '" + songTitle + "'");
+                    completeProcessDef.resolve();
+                });
             }
         });
 
-        function formatVideoUrl(videoKey) {
-            return YOUTUBE_URL + '/watch?v=' + videoKey.replace(/"/g, '');
-        }
+        return completeProcessDef.promise;
+    }
+
+    function formatVideoUrl(videoKey) {
+        return YOUTUBE_URL + '/watch?v=' + videoKey.replace(/"/g, '');
     }
 
     return module;
 };
-// module.exports;
 
-function initCallbacksBehavoir() {
+function initCallbacksBehavior() {
     youtubeDl.getInfo = denodeify(youtubeDl.getInfo, Promise, false);
 
     Promise.onPossiblyUnhandledRejection(function(error){
         throw error;
     });
 }
+
