@@ -13,13 +13,14 @@ const FfmpegCommand = require('fluent-ffmpeg');
 initCallbacksBehavior();
 
 module.exports = function () {
-    // public
+
     const module = {
         setOutputDir: setOutputDir,
         setMaxYtSearchResultsNumber : setMaxYtSearchResultsNumber,
         downloadSongsList: downloadSongsList
     };
 
+    // public
     function setOutputDir(outputDirPath) {
         if (!fs.existsSync(outputDirPath)){
             fs.mkdirSync(outputDirPath);

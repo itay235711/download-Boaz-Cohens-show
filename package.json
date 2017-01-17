@@ -10,8 +10,10 @@
   "license": "ISC",
   "dependencies": {
     "bluebird": "^3.4.7",
+    "dateformat": "^2.0.0",
     "deferred": "^0.7.5",
     "fluent-ffmpeg": "^2.1.0",
+    "phantom": "^4.0.0",
     "promise": "^7.1.1",
     "promise-denodeify": "^1.2.2",
     "underscore-node": "^0.1.2",
