@@ -112,7 +112,7 @@ module.exports = function () {
     function convertVideoToMp3AndOutputToDir(bestQualityVideo) {
 
         const outputFilePath = _outputDir + '\\' + bestQualityVideo.info.title + '.mp3';
-        const converter = new FfmpegCommand({source: bestQualityVideo.downloadEntry});
+        const converter = new FfmpegCommand({source: bestQualityVideo.downloadEntry, stdoutLines:0});
 
         const FIX_WRONG_DURATION_FLAG = '-write_xing 0';
         converter
@@ -132,6 +132,7 @@ module.exports = function () {
         const youtubeApi = new YoutubeApi();
         youtubeApi.setKey(YOUTUBE_API_KEY);
 
+        youtubeApi.addParam('type', 'video');
         const searchPromise = youtubeApi.search(songTitle, _maxYtSearchResultsNumber);
         return searchPromise;
     }
@@ -157,7 +158,7 @@ module.exports = function () {
     let _outputDir;
     let _maxYtSearchResultsNumber = 3;
     const YOUTUBE_URL = 'https://www.youtube.com';
-    const YOUTUBE_API_KEY = 'AIzaSyB1OOSpTREs85WUMvIgJvLTZKye4BVsoFU';
+    const YOUTUBE_API_KEY = 'AIzaSyClAQoAKyT5YLldaOJ2l5mKlhFt76T7UkY';
     const FFMPEG_PATH = '.\\ffmpeg\\ffmpeg-20170112-6596b34-win64-static\\bin\\ffmpeg.exe';
 
     return module;

@@ -5,8 +5,8 @@ const ysd = require('./youtube-songs-download-module.js')();
 const extractor = require('./boaz-cohen-site-extractor.js');
 const dateFormat = require('dateformat');
 
-// testSongsDownloader();
-testSiteExtractor();
+testSongsDownloader();
+// testSiteExtractor();
 
 function testSiteExtractor() {
 
@@ -18,7 +18,7 @@ function testSongsDownloader() {
     ysd.setOutputDir('C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\')
         .setMaxYtSearchResultsNumber(3);
 
-    ysd.downloadSongsList(['בא לי מקופלת', 'yesterday']).then(() => {
+    ysd.downloadSongsList(['יהלי סובול - כל יום קצת']).then(() => {
         process.exit(0);
     }).catch(err => {
         console.log(err);
