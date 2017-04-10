@@ -14,7 +14,6 @@ initCallbacksBehavior();
 
 module.exports = function () {
 
-    var x;
     const module = {
         setOutputDir: setOutputDir,
         setMaxYtSearchResultsNumber : setMaxYtSearchResultsNumber,

@@ -13,6 +13,7 @@
     "dateformat": "^2.0.0",
     "deferred": "^0.7.5",
     "fluent-ffmpeg": "^2.1.0",
+    "moment": "^2.18.1",
     "optimist": "^0.6.1",
     "phantom": "^4.0.0",
     "promise": "^7.1.1",

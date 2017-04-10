@@ -4,8 +4,65 @@
 
 const google = require('googleapis');
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
+const moment = require('moment');
 
-aoth_authenticator.authenticate().then(listLabels);
+aoth_authenticator.authenticate().then(messagesInShazamLabel);
+
+function messagesInShazamLabel(auth) {
+
+
+
+    const gmail = google.gmail('v1');
+    const initialRequest = gmail.users.messages.list({
+        auth: auth,
+        userId: 'me',
+        q: getTodaysNewShazamMailsQuery(),
+        maxResults: 200
+    }, function (err, response) {
+        if (err)
+            console.log(err);
+        else
+            console.log(response.messages.length);
+    });
+    // listMessages('label:Shazam', function (messagesList) {
+    //     console.log(messagesList);
+    // });
+
+    function listMessages(query, callback) {
+        var getPageOfMessages = function(request, result) {
+            request.execute(function(resp) {
+                result = result.concat(resp.messages);
+                var nextPageToken = resp.nextPageToken;
+                if (!nextPageToken) {
+                    callback(result);
+                } else {
+                    request = gapi.client.gmail.users.messages.list({
+                        'userId': userId,
+                        'pageToken': nextPageToken,
+                        'q': query
+                    });
+                    getPageOfMessages(request, result);
+                }
+            });
+        };
+        const gmail = google.gmail('v1');
+        const initialRequest = gmail.users.messages.list({
+            auth: auth,
+            userId: 'me',
+            'q': query
+        });
+        getPageOfMessages(initialRequest, []);
+    }
+}
+
+function getTodaysNewShazamMailsQuery() {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 3);
+    const after = moment(yesterday).format("YYYY/MM/DD");
+    const query = 'label:Shazam after:' + after;
+    return query;
+}
 
 /**
  * Lists the labels in the user's account.
@@ -14,6 +71,7 @@ aoth_authenticator.authenticate().then(listLabels);
  */
 function listLabels(auth) {
     var gmail = google.gmail('v1');
+
     gmail.users.labels.list({
         auth: auth,
         userId: 'me',
