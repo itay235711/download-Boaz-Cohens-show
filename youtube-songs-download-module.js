@@ -196,8 +196,6 @@ module.exports = function () {
     }
 
     function parseLastfmTrackInfoToMp3Tags(lastfmTrackInfoRes, songTitleDetails) {
-        // const def = deferred();
-        // let callbacksChained = false;
         const retTags = {};
         let retPromise = Promise.resolve(retTags);
 
@@ -219,42 +217,47 @@ module.exports = function () {
                 retTags.trackNumber = trackInfo.album["@attr"].position;
             }
 
-            if (Array.isArray(trackInfo.album.image)) {
-                const largeImageLink = _.find(trackInfo.album.image,
-                    imageLink => imageLink["#text"] && imageLink.size.toLowerCase() === "large"
-                );
-
-                if (largeImageLink) {
-
-                    const def = deferred();
-                    retPromise = def.promise;
-
-                    const albumImageTempPath = _outputDir + '\\' + retTags.album + '.png';
-                    downloadFile(largeImageLink["#text"], albumImageTempPath,
-                        function success(){
-                            retTags.image = albumImageTempPath;
-                            def.resolve(retTags);
-                        },
-                        function error(err) {
-                            console.warn("WARNING: failed downloading image for the album: '" +
-                                retTags.album + "'. The  error:\n" + err);
-
-                            if (fs.existsSync(albumImageTempPath)) {
-                                fs.unlinkSync(albumImageTempPath);
-                            }
-
-                            def.resolve(retTags)
-                        }
-                    );
-                }
-            }
+            retPromise = fetchImageToTag(trackInfo, retPromise, retTags);
         }
 
         return retPromise;
+    }
 
-        // if (!callbacksChained){
-        //     def.resolve(retTags);
-        // }
+    function fetchImageToTag(trackInfo, retPromise, retTags) {
+        if (!Array.isArray(trackInfo.album.image)) {
+            throw new Error('Expected array of images info, received ' +
+                typeof trackInfo.album.image);
+        }
+        else {
+            const largeImageLink = _.find(trackInfo.album.image,
+                imageLink => imageLink["#text"] && imageLink.size.toLowerCase() === "large"
+            );
+
+            if (largeImageLink) {
+
+                const def = deferred();
+                retPromise = def.promise;
+
+                const albumImageTempPath = _outputDir + '\\' + retTags.album + '.png';
+                downloadFile(largeImageLink["#text"], albumImageTempPath,
+                    function success() {
+                        retTags.image = albumImageTempPath;
+                        def.resolve(retTags);
+                    },
+                    function error(err) {
+                        console.warn("WARNING: failed downloading image for the album: '" +
+                            retTags.album + "'. The  error:\n" + err);
+
+                        if (fs.existsSync(albumImageTempPath)) {
+                            fs.unlinkSync(albumImageTempPath);
+                        }
+
+                        def.resolve(retTags)
+                    }
+                );
+            }
+        }
+        return retPromise;
     }
 
     function mergeFileAndTrackTags(songFilePath, trackTags) {

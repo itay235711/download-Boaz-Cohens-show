@@ -12,8 +12,6 @@ const denodeify = require('promise-denodeify');
 
 initCallbacksBehavior();
 
-// tryExtractMessageSongTitle();
-
 module.exports.extractShazamLabelNewSongTitles = extractShazamLabelNewSongTitles;
 
 function extractShazamLabelNewSongTitles() {
