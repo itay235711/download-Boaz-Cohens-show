@@ -3,7 +3,7 @@
  */
 const ysd = require('./youtube-songs-download-module.js')();
 // const extractor = require('./boaz-cohen-site-extractor.js');
-const extractor = require('./shazam_gmaillabel_extractor.js');
+const extractor = require('./shazam_gmaillabel_extractor.js')();
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
 
 downloadShazamNewSongs();
@@ -13,6 +13,8 @@ function downloadShazamNewSongs() {
     extractor.extractShazamLabelNewSongTitles().then(songTitles =>{
         ysd.setOutputDir('C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\')
             .setMaxYtSearchResultsNumber(3);
+
+        ysd.assignOnSongDownloaded(extractor.markMessageAsReadBySongTitle);
 
         ysd.downloadSongsList(songTitles).then(() => {
             console.log('done.');

@@ -22,7 +22,8 @@ module.exports = function () {
     const module = {
         setOutputDir: setOutputDir,
         setMaxYtSearchResultsNumber : setMaxYtSearchResultsNumber,
-        downloadSongsList: downloadSongsList
+        downloadSongsList: downloadSongsList,
+        assignOnSongDownloaded : assignOnSongDownloaded
     };
 
     // public
@@ -59,19 +60,35 @@ module.exports = function () {
         }
     }
 
+    function assignOnSongDownloaded(callback) {
+        if (_onSongDownloadedCallback) {
+            throw new Error('Only one callback is assignable');
+        }
+        else {
+            _onSongDownloadedCallback = callback;
+        }
+    }
+
     // privates
     function downloadSong(songTitle) {
 
-        return searchYtByTitle(songTitle)
-        .then(searchRes => mapResultsToYtVideosUrls(songTitle, searchRes))
-        .then(startDownloadYtVideosUrls)
-        .then(chooseBestQualityVideo)
-        .then(convertVideoToMp3AndOutputToDir)
-        .then(songFilePath => setSongMp3Tags(songTitle, songFilePath))
-        .then(() => {
-            console.log("Finished downloadFile '" + songTitle + "'");
-            return Promise.resolve();
-        });
+        let downloadChain = searchYtByTitle(songTitle)
+            .then(searchRes => mapResultsToYtVideosUrls(songTitle, searchRes))
+            .then(startDownloadYtVideosUrls)
+            .then(chooseBestQualityVideo)
+            .then(convertVideoToMp3AndOutputToDir)
+            .then(songFilePath => setSongMp3Tags(songTitle, songFilePath));
+
+        if (_onSongDownloadedCallback) {
+            downloadChain = downloadChain.then(() => _onSongDownloadedCallback(songTitle));
+        }
+
+        downloadChain = downloadChain.then(() => {
+                console.log("Finished downloadFile '" + songTitle + "'");
+                return Promise.resolve();
+            });
+
+        return downloadChain;
     }
 
     function cleanOutputDir() {
@@ -311,6 +328,7 @@ module.exports = function () {
     // members
     let _outputDir;
     let _maxYtSearchResultsNumber = 3;
+    let _onSongDownloadedCallback;
     const YOUTUBE_URL = 'https://www.youtube.com';
     const YOUTUBE_API_KEY = 'AIzaSyClAQoAKyT5YLldaOJ2l5mKlhFt76T7UkY';
     const FFMPEG_PATH = '.\\ffmpeg\\ffmpeg-20170112-6596b34-win64-static\\bin\\ffmpeg.exe';
