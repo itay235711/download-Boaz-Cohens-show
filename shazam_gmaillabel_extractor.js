@@ -30,7 +30,6 @@ module.exports = function () {
                 return Promise.resolve(auth);
             });
         }
-
     }
 
     function extractShazamLabelNewSongTitles() {
@@ -76,7 +75,7 @@ module.exports = function () {
                 auth: auth,
                 userId: 'me',
                 q: buildNewShazamMailsQuery(),
-                maxResults: 5
+                maxResults: 300
             });
         });
     }
@@ -190,7 +189,8 @@ module.exports = function () {
     let _authInstance;
     const _songTitleToMessageIdsMap = {};
     const MESSAGE_SPECIAL_CHARS_MAP = {
-        '&#39;':""
+        '&#39;':"",
+        '&amp;':""
     };
 
     return module;

@@ -47,16 +47,16 @@ module.exports = function () {
             return Promise.reject(new Error("'songsList' must be an array"));
         }
         else {
-            cleanOutputDir();
+            // cleanOutputDir();
 
-            const downloadPromises = [];
+            let currentPromise = Promise.resolve();
             for (let i = 0; i < songsList.length; i++) {
                 const songTitle = songsList[i];
-                const songPromise = downloadSong(songTitle);
-                downloadPromises.push(songPromise);
+                currentPromise =
+                    currentPromise.then(() => downloadSong(songTitle, songsList.length));
             }
 
-            return Promise.all(downloadPromises);
+            return currentPromise;
         }
     }
 
@@ -70,7 +70,11 @@ module.exports = function () {
     }
 
     // privates
-    function downloadSong(songTitle) {
+    function downloadSong(songTitle, totalSongsCount) {
+        console.log("Starting download song number " + _currentSongNumber +
+            " of " + totalSongsCount + ": '" + songTitle + "'"
+        );
+        _currentSongNumber++;
 
         let downloadChain = searchYtByTitle(songTitle)
             .then(searchRes => mapResultsToYtVideosUrls(songTitle, searchRes))
@@ -84,9 +88,14 @@ module.exports = function () {
         }
 
         downloadChain = downloadChain.then(() => {
-                console.log("Finished downloadFile '" + songTitle + "'");
-                return Promise.resolve();
-            });
+            console.log("Download successful.");
+            return Promise.resolve();
+        });
+
+        downloadChain = downloadChain.catch(() =>{
+            console.error("Failed download the song '" + songTitle + "'.");
+            return Promise.resolve();
+        });
 
         return downloadChain;
     }
@@ -145,6 +154,8 @@ module.exports = function () {
     function convertVideoToMp3AndOutputToDir(bestQualityVideo) {
 
         const outputFilePath = _outputDir + '\\' + bestQualityVideo.info.title + '.mp3';
+        deletePreviousFileIfExists(outputFilePath);
+
         const converter = new FfmpegCommand({source: bestQualityVideo.downloadEntry, stdoutLines:0});
 
         const FIX_WRONG_DURATION_FLAG = '-write_xing 0';
@@ -159,6 +170,12 @@ module.exports = function () {
             .saveToFile(outputFilePath);
 
         return def.promise;
+    }
+
+    function deletePreviousFileIfExists(filePath) {
+        if (fs.existsSync(filePath)){
+            fs.unlinkSync(filePath);
+        }
     }
 
     function searchYtByTitle(songTitle) {
@@ -329,6 +346,7 @@ module.exports = function () {
     let _outputDir;
     let _maxYtSearchResultsNumber = 3;
     let _onSongDownloadedCallback;
+    let _currentSongNumber = 1;
     const YOUTUBE_URL = 'https://www.youtube.com';
     const YOUTUBE_API_KEY = 'AIzaSyClAQoAKyT5YLldaOJ2l5mKlhFt76T7UkY';
     const FFMPEG_PATH = '.\\ffmpeg\\ffmpeg-20170112-6596b34-win64-static\\bin\\ffmpeg.exe';
