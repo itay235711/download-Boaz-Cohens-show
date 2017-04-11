@@ -19,25 +19,21 @@ module.exports.extractShazamLabelNewSongTitles = extractShazamLabelNewSongTitles
 function extractShazamLabelNewSongTitles() {
     return aoth_authenticator.authenticate().then(auth => {
         return queryNewShazamLabelMessages(auth)
-        .then(response => {
-            if (response.resultSizeEstimate == 0) {
-                console.log('No new messages to process.');
-            }
-            else {
-                console.log(response.messages.length + ' new messages to process.');
+            .then(response => {
+                if (response.resultSizeEstimate == 0) {
+                    console.log('No new messages to process.');
+                }
+                else {
+                    console.log(response.messages.length + ' new messages to process.');
 
-                const fetchAllMessagesContentPromise = Promise.all(response.messages.map(
-                    messageDetails => fetchMessageContent(messageDetails, auth))
-                );
-                return fetchAllMessagesContentPromise
-                    .then(extractMessagesSongTitles);
-            }
-        })
-        .catch(err => {
-            reportErrorViaMail(err, auth);
-            throw err;
-        });
-    })
+                    const fetchAllMessagesContentPromise = Promise.all(response.messages.map(
+                        messageDetails => fetchMessageContent(messageDetails, auth))
+                    );
+                    return fetchAllMessagesContentPromise
+                        .then(extractMessagesSongTitles);
+                }
+            });
+    });
 }
 
 function queryNewShazamLabelMessages(auth) {
@@ -118,11 +114,7 @@ function tryExtractMessageSongTitle(messageData) {
     return ret;
 }
 
-function reportErrorViaMail(err, auth) {
-
-}
-
 function initCallbacksBehavior() {
-    gmail.users.messages.list = denodeify(gmail.users.messages.list, Promise, false)
+    gmail.users.messages.list = denodeify(gmail.users.messages.list, Promise, false);
     gmail.users.messages.get = denodeify(gmail.users.messages.get, Promise, false);
 }
