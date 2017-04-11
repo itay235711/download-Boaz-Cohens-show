@@ -2,16 +2,18 @@
  * Created by itay on 1/12/2017.
  */
 const ysd = require('./youtube-songs-download-module.js')();
-const extractor = require('./boaz-cohen-site-extractor.js');
+// const extractor = require('./boaz-cohen-site-extractor.js');
+const extractor = require('./shazam_gmaillabel_extractor.js');
 const dateFormat = require('dateformat');
 
-testSongsDownloader();
-// testSiteExtractor();
+// testSongsDownloader();
+testSiteExtractor();
 
 function testSiteExtractor() {
 
-    const todaysDate = dateFormat(new Date(), 'dd.mm.yy');
-    extractor.extractShowPlaylist();
+    extractor.extractShazamLabelNewSongTitles().then(songTitles =>{
+        var x = 1;
+    });
 }
 
 function testSongsDownloader() {
