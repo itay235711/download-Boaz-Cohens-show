@@ -2,7 +2,7 @@
  * Created by itay on 4/16/2017.
  */
 
-module.exports.adjustSpecialChars = adjustSongTitle;
+module.exports.adjustSongTitle = adjustSongTitle;
 
 function adjustSongTitle(songTile) {
     let adjustedSongTitle = adjustSpecialChars(songTile);
@@ -22,6 +22,11 @@ function adjustSpecialChars(songTile) {
 }
 
 function removeParenthesisParts(adjustedSongTitle) {
+
+    if (adjustedSongTitle.indexOf('Savages') != -1) {
+        var x = 1;
+    }
+
     const rx = new RegExp("\\(.*?\\)", 'g');
     const ret = adjustedSongTitle.replace(rx, "");
 
@@ -33,7 +38,6 @@ const MESSAGE_SPECIAL_CHARS_MAP = {
     '&amp;':"",
     '"':"",
     ":":"",
-    "/":"",
     "\/":"",
     "\\|":""
 };

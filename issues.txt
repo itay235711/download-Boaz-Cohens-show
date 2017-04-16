@@ -1,8 +1,10 @@
 bugs:
     * error message displays after next song downloading entry log
     * another song can be downloaded! need to check that the song contains the original title
-    * still downloading some live versions (not  sure how bad it is)
+    * still downloading some live versions (not sure how bad it is)
+    * sometimes youtube-dl.exe still fails. Need to retry at least one time in this case
+    * some albums create an empty file in their name in  the folder
 
 not implemented yet:
-* sending mails on failures
-* upload new songs to the drive (and delete old ones weekly)
+    * sending mails on failures
+    * upload new songs to the drive (and delete old ones weekly)

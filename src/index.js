@@ -2,7 +2,6 @@
  * Created by itay on 1/12/2017.
  */
 const ysd = require('./youtube-songs-downloader.js')();
-// const extractor = require('./boaz-cohen-site-extractor.js');
 const extractor = require('./shazam_gmaillabel_extractor.js')();
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
 
@@ -11,7 +10,7 @@ downloadShazamNewSongs();
 function downloadShazamNewSongs() {
 
     extractor.extractShazamLabelNewSongTitles().then(songTitles =>{
-        ysd.setOutputDir('C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\from_the_begging\\')
+        ysd.setOutputDir('C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\anoter_ride\\')
             .setMaxYtSearchResultsNumber(3)
             .setMaxSongDurationMinutes(30)
             .setMaxSongFileSizeOptions({ prefferedSizeLimitMB: 50, maxSizeLimitMB: 80});
