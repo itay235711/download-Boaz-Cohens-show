@@ -1,0 +1,6 @@
+errors:
+    * error message displays after next song downloading entry log
+
+not implemented yet:
+* sending mails on failures
+* upload new songs to the drive (and delete old ones weekly)
