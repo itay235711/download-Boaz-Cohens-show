@@ -1,0 +1,4 @@
+Application name	DownloadBoazCohensShow
+API key	7977ac5a32f72528cbe1bc861b8e88eb
+Shared secret	d33a5c02c44167565ac7515cdaf4adab
+Registered to	itay_lotan

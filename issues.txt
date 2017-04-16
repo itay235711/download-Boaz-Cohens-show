@@ -1,5 +1,6 @@
-errors:
+bugs:
     * error message displays after next song downloading entry log
+    * another song can be downloaded! need to check that the song contains the original title
 
 not implemented yet:
 * sending mails on failures
