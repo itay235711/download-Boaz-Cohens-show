@@ -19,7 +19,7 @@ function authenticate() {
 
     return new Promise(function(resolve, reject){
         // Load client secrets from a local file.
-        fs.readFile('google_api/client_secret.json', function processClientSecrets(err, content) {
+        fs.readFile('src/google_api/client_secret.json', function processClientSecrets(err, content) {
             if (err) {
                 console.log('Error loading client secret file: ' + err);
                 reject(err);

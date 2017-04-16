@@ -1,7 +1,7 @@
 /**
  * Created by itay on 1/12/2017.
  */
-const ysd = require('./youtube-songs-download-module.js')();
+const ysd = require('./youtube-songs-downloader.js')();
 // const extractor = require('./boaz-cohen-site-extractor.js');
 const extractor = require('./shazam_gmaillabel_extractor.js')();
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');

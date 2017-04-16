@@ -3,7 +3,7 @@
  */
 
 const optimist = require('optimist');
-const ysd = require('./youtube-songs-download-module.js')();
+const ysd = require('./youtube-songs-downloader.js')();
 const OUTPUT_DIR = 'C:\\Users\\itay\\Music\\2_youtube_instant\\';
 const cp = require('child_process');
 
