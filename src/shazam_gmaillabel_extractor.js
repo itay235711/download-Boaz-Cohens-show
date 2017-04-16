@@ -134,7 +134,7 @@ module.exports = function () {
                 userId: 'me',
                 auth: auth,
                 id: messageId,
-                resource: {removeLabelIds: ["UNREAD"]}
+                resource: {removeLabelIds: ["UNREAD", "IMPORTANT"]}
             })
         );
     }

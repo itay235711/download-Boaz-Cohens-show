@@ -13,6 +13,7 @@ const FfmpegCommand = require('fluent-ffmpeg');
 const nodeID3 = require('node-id3');
 const LastFmNode = require('lastfm').LastFmNode;
 const merge = require('merge');
+const progetUtils = require('./utils.js');
 const webRequest = require('request').defaults({ encoding: null });
 
 initCallbacksBehavior();
@@ -217,7 +218,9 @@ module.exports = function () {
 
     function convertVideoToMp3AndOutputToDir(chosenVideo) {
 
-        const outputFilePath = _outputDir + '\\' + chosenVideo.info.title + '.mp3';
+        // const outputFilePath = _outputDir + '\\' + chosenVideo.info.title + '.mp3';
+        const outputFileName = progetUtils.adjustSpecialChars(chosenVideo.info.title);
+        const outputFilePath = path.join(_outputDir, outputFileName) + '.mp3';
         deletePreviousFileIfExists(outputFilePath);
 
         const converter = new FfmpegCommand({source: chosenVideo.downloadEntry, stdoutLines:0});
