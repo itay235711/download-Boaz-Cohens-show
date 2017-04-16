@@ -11,10 +11,13 @@ downloadShazamNewSongs();
 function downloadShazamNewSongs() {
 
     extractor.extractShazamLabelNewSongTitles().then(songTitles =>{
-        ysd.setOutputDir('C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\')
-            .setMaxYtSearchResultsNumber(3);
+        ysd.setOutputDir('C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\from_the_begging\\')
+            .setMaxYtSearchResultsNumber(3)
+            .setMaxSongDurationMinutes(30)
+            .setMaxSongFileSizeOptions({ prefferedSizeLimitMB: 50, maxSizeLimitMB: 80});
 
         ysd.assignOnSongDownloaded(extractor.markMessageAsReadBySongTitle);
+        ysd.assignOnSongDownloadError(extractor.markMessageAsProblematicBySongTitle);
 
         ysd.downloadSongsList(songTitles).then(() => {
             console.log('done.');

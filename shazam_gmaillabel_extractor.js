@@ -2,6 +2,7 @@
  * Created by itay on 4/10/2017.
  */
 
+const projectUtils = require('./utils.js');
 const gmail = require('googleapis').gmail('v1');
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
 const moment = require('moment');
@@ -16,7 +17,8 @@ module.exports = function () {
 
     const module = {
         extractShazamLabelNewSongTitles: extractShazamLabelNewSongTitles,
-        markMessageAsReadBySongTitle : markMessageAsReadBySongTitle
+        markMessageAsReadBySongTitle : markMessageAsReadBySongTitle,
+        markMessageAsProblematicBySongTitle : markMessageAsProblematicBySongTitle
     };
 
     // public
@@ -52,20 +54,11 @@ module.exports = function () {
     }
 
     function markMessageAsReadBySongTitle(songTitle) {
-        const messagesIds = _songTitleToMessageIdsMap[songTitle];
+        return markSongByTitle(songTitle, markMessageAsRead);
+    }
 
-        if (!messagesIds) {
-            throw new Error("The song '" + songTitle + "' is known to this extractor");
-        }
-
-        const unmarkingPromises = [];
-
-        _.each(messagesIds, id => {
-            const promise = markMessageAsRead(id);
-            unmarkingPromises.push(promise);
-        });
-
-        return Promise.all(unmarkingPromises);
+    function markMessageAsProblematicBySongTitle(songTitle) {
+        return markSongByTitle(songTitle, markMessageAsProblematic);
     }
 
     // private
@@ -100,18 +93,9 @@ module.exports = function () {
         }
         else {
             const songTitles =
-                titleExtractions.map(extrc => extrc.val).map(adjustSpecialChars);
+                titleExtractions.map(extrc => extrc.val).map(projectUtils.adjustSpecialChars);
             return Promise.resolve(songTitles);
         }
-    }
-
-    function adjustSpecialChars(songTile) {
-        let adjustedSongTitle = songTile;
-        for (let sc in MESSAGE_SPECIAL_CHARS_MAP) {
-            adjustedSongTitle = adjustedSongTitle.replace(sc, MESSAGE_SPECIAL_CHARS_MAP[sc]);
-        }
-
-        return adjustedSongTitle;
     }
 
     function fetchMessageContent(messageDetails) {
@@ -125,6 +109,25 @@ module.exports = function () {
         });
     }
 
+    function markSongByTitle(songTitle, markingFunction) {
+
+        const adjustedSongTitle = projectUtils.adjustSpecialChars(songTitle);
+        const messagesIds = _songTitleToMessageIdsMap[adjustedSongTitle];
+
+        if (!messagesIds) {
+            throw new Error("The song '" + songTitle + "' is known to this extractor");
+        }
+
+        const markingPromises = [];
+
+        _.each(messagesIds, id => {
+            const promise = markingFunction(id);
+            markingPromises.push(promise);
+        });
+
+        return Promise.all(markingPromises);
+    }
+
     function markMessageAsRead(messageId) {
         return getAuthInstance().then(auth =>
             gmail.users.messages.modify({
@@ -132,6 +135,20 @@ module.exports = function () {
                 auth: auth,
                 id: messageId,
                 resource: {removeLabelIds: ["UNREAD"]}
+            })
+        );
+    }
+
+    function markMessageAsProblematic(messageId) {
+        return getAuthInstance().then(auth =>
+            gmail.users.messages.modify({
+                userId: 'me',
+                auth: auth,
+                id: messageId,
+                resource: {
+                    addLabelIds: ["IMPORTANT"],
+                    removeLabelIds: ["UNREAD"]
+                }
             })
         );
     }
@@ -177,21 +194,18 @@ module.exports = function () {
     // On theory song title can appear on multiple mails, so map array of ids instead of
     // just one. Practicably this array will contain only one id 99% of the times.
     function mapMessageToSongTitle(songTitle, messageData) {
-        if (_songTitleToMessageIdsMap[songTitle]) {
-            _songTitleToMessageIdsMap[songTitle].push(messageData.id);
+        const adjustedSongTitle = projectUtils.adjustSpecialChars(songTitle);
+        if (_songTitleToMessageIdsMap[adjustedSongTitle]) {
+            _songTitleToMessageIdsMap[adjustedSongTitle].push(messageData.id);
         }
         else {
-            _songTitleToMessageIdsMap[songTitle] = [messageData.id]
+            _songTitleToMessageIdsMap[adjustedSongTitle] = [messageData.id]
         }
     }
 
     // members
     let _authInstance;
     const _songTitleToMessageIdsMap = {};
-    const MESSAGE_SPECIAL_CHARS_MAP = {
-        '&#39;':"",
-        '&amp;':""
-    };
 
     return module;
 };

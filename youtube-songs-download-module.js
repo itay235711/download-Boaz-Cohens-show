@@ -22,8 +22,11 @@ module.exports = function () {
     const module = {
         setOutputDir: setOutputDir,
         setMaxYtSearchResultsNumber : setMaxYtSearchResultsNumber,
+        setMaxSongFileSizeOptions : setMaxSongFileSizeOptions,
+        setMaxSongDurationMinutes : setMaxSongDurationMinutes,
         downloadSongsList: downloadSongsList,
-        assignOnSongDownloaded : assignOnSongDownloaded
+        assignOnSongDownloaded : assignOnSongDownloaded,
+        assignOnSongDownloadError : assignOnSongDownloadError
     };
 
     // public
@@ -38,6 +41,27 @@ module.exports = function () {
 
     function setMaxYtSearchResultsNumber(maxNumber) {
         _maxYtSearchResultsNumber = maxNumber;
+
+        return module;
+    }
+
+    function setMaxSongFileSizeOptions(options) {
+        const TO_BYTES = 1024 * 1024;
+        
+        if (!options.prefferedSizeLimitMB || !options.maxSizeLimitMB)
+            throw "Both 'prefferedSizeLimitMB' and 'maxSizeLimitMB' must have values";
+
+        if (options.prefferedSizeLimitMB > options.maxSizeLimitMB)
+            throw 'maxSizeLimitMB max >= prefferedSizeLimitMB';
+
+        _prefferedSongSizeLimitBytes = TO_BYTES * options.prefferedSizeLimitMB;
+        _maxSongSizeLimitBytes = TO_BYTES * options.prefferedSizeLimitMB;
+
+        return module;
+    }
+
+    function setMaxSongDurationMinutes(durationMinutes) {
+        _maxSongDurationSeconds = durationMinutes * 60;
 
         return module;
     }
@@ -69,6 +93,15 @@ module.exports = function () {
         }
     }
 
+    function assignOnSongDownloadError(callback) {
+        if (_onSongDownloadErrorCallback) {
+            throw new Error('Only one callback is assignable');
+        }
+        else {
+            _onSongDownloadErrorCallback = callback;
+        }
+    }
+
     // privates
     function downloadSong(songTitle, totalSongsCount) {
         console.log("Starting download song number " + _currentSongNumber +
@@ -79,7 +112,7 @@ module.exports = function () {
         let downloadChain = searchYtByTitle(songTitle)
             .then(searchRes => mapResultsToYtVideosUrls(songTitle, searchRes))
             .then(startDownloadYtVideosUrls)
-            .then(chooseBestQualityVideo)
+            .then(chooseVideoByQuality)
             .then(convertVideoToMp3AndOutputToDir)
             .then(songFilePath => setSongMp3Tags(songTitle, songFilePath));
 
@@ -92,9 +125,14 @@ module.exports = function () {
             return Promise.resolve();
         });
 
-        downloadChain = downloadChain.catch(() =>{
-            console.error("Failed download the song '" + songTitle + "'.");
-            return Promise.resolve();
+        downloadChain = downloadChain.catch(e =>{
+            console.error("Failed download the song '" + songTitle + "'. error:\n" + e);
+            if (!_onSongDownloadErrorCallback) {
+                return Promise.resolve();
+            }
+            else {
+                return Promise.resolve(_onSongDownloadErrorCallback(songTitle, e));
+            }
         });
 
         return downloadChain;
@@ -114,7 +152,7 @@ module.exports = function () {
             const deff = deferred();
             videoDownloadPromises.push(deff.promise);
 
-            const downloadEntry = youtubeDl(url, ['--format=18']);
+            const downloadEntry = startNewDownload(url);
 
             downloadEntry.on('info', function (info) {
                 deff.resolve({info: info, downloadEntry: downloadEntry});
@@ -122,6 +160,10 @@ module.exports = function () {
         });
 
         return Promise.all(videoDownloadPromises);
+    }
+
+    function startNewDownload(url) {
+        return youtubeDl(url, ['--format=18'], {cwd: __dirname, maxBuffer: Infinity});
     }
 
     function mapResultsToYtVideosUrls(songTitle, searchRes) {
@@ -137,18 +179,47 @@ module.exports = function () {
         return Promise.resolve(videoUrls);
     }
 
-    function chooseBestQualityVideo(videosDownload) {
-        let bestQualityVideo = undefined;
-        let bestQualityVideoSize = -1;
+    function chooseVideoByQuality(videosDownload) {
 
-        _.each(videosDownload, function (videosDownload) {
-            if (videosDownload.info.size > bestQualityVideoSize) {
-                bestQualityVideo = videosDownload;
-                bestQualityVideoSize = videosDownload.info.size;
-            }
-        });
+        const reasonableDurationVideos = _.filter(videosDownload,
+            video => durationStringToSeconds(video.info.duration) <= _maxSongDurationSeconds
+        );
 
-        return Promise.resolve(bestQualityVideo);
+        const videosBySizeDesc = _.sortBy(reasonableDurationVideos, video => video.info.size).reverse();
+        let chosenVideo = _.find(videosBySizeDesc, video => video.info.size <= _prefferedSongSizeLimitBytes);
+        if (!chosenVideo) {
+            chosenVideo = _.find(videosBySizeDesc, video => video.info.size <= _maxSongSizeLimitBytes);
+        }
+        if (!chosenVideo) {
+            throw "All the results for the yt search are too large (larger then '" +
+                _maxSongSizeLimitBytes + "' configured)";
+        }
+
+        return Promise.resolve(chosenVideo);
+
+        // let bestQualityVideo = undefined;
+        // let bestQualityVideoSize = -1;
+        //
+        // _.each(videosDownload, function (videosDownload) {
+        //     if (videosDownload.info.size > bestQualityVideoSize) {
+        //         bestQualityVideo = videosDownload;
+        //         bestQualityVideoSize = videosDownload.info.size;
+        //     }
+        // });
+        //
+        // return Promise.resolve(bestQualityVideo);
+    }
+
+    function durationStringToSeconds(durationString) {
+        let durationSeconds = 0;
+        const partsLittleIndia = durationString.split(':').reverse();
+
+        for (let i = 0; i < partsLittleIndia.length; i++) {
+            const part = partsLittleIndia[i];
+            durationSeconds += part * Math.pow(60, i);
+        }
+
+        return durationSeconds;
     }
 
     function convertVideoToMp3AndOutputToDir(bestQualityVideo) {
@@ -345,7 +416,11 @@ module.exports = function () {
     // members
     let _outputDir;
     let _maxYtSearchResultsNumber = 3;
+    let _prefferedSongSizeLimitBytes = 10 * 1024 * 1024;
+    let _maxSongDurationSeconds = 30 * 60;
+    let _maxSongSizeLimitBytes = _prefferedSongSizeLimitBytes * 4;
     let _onSongDownloadedCallback;
+    let _onSongDownloadErrorCallback;
     let _currentSongNumber = 1;
     const YOUTUBE_URL = 'https://www.youtube.com';
     const YOUTUBE_API_KEY = 'AIzaSyClAQoAKyT5YLldaOJ2l5mKlhFt76T7UkY';
@@ -367,7 +442,7 @@ function initCallbacksBehavior() {
         return apiInstace;
     };
 
-    Promise.onPossiblyUnhandledRejection(function(error){
-        throw error;
-    });
+    // Promise.onPossiblyUnhandledRejection(function(error){
+    //     throw error;
+    // });
 }
