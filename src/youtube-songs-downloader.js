@@ -112,7 +112,7 @@ module.exports = function () {
         let downloadChain = searchYtByTitle(songTitle)
             .then(searchRes => mapResultsToYtVideosUrls(songTitle, searchRes))
             .then(startDownloadYtVideosUrls)
-            .then(chooseVideoByQuality)
+            .then(chooseVideoToDownload)
             .then(convertVideoToMp3AndOutputToDir)
             .then(songFilePath => setSongMp3Tags(songTitle, songFilePath));
 
@@ -154,7 +154,11 @@ module.exports = function () {
 
             const downloadEntry = startNewDownload(url);
 
-            downloadEntry.on('info', function (info) {
+            downloadEntry.on('error', err => {
+                deff.reject(err);
+            });
+
+            downloadEntry.on('info', info => {
                 deff.resolve({info: info, downloadEntry: downloadEntry});
             });
         });
@@ -179,35 +183,36 @@ module.exports = function () {
         return Promise.resolve(videoUrls);
     }
 
-    function chooseVideoByQuality(videosDownload) {
+    function chooseVideoToDownload(downloadingVideos) {
 
-        const reasonableDurationVideos = _.filter(videosDownload,
+        const reasonableDurationVideos = _.filter(downloadingVideos,
             video => durationStringToSeconds(video.info.duration) <= _maxSongDurationSeconds
         );
 
-        const videosBySizeDesc = _.sortBy(reasonableDurationVideos, video => video.info.size).reverse();
-        let chosenVideo = _.find(videosBySizeDesc, video => video.info.size <= _prefferedSongSizeLimitBytes);
+        const prioritizedVideos = _.sortBy(reasonableDurationVideos, video => video.info.view_count).reverse();
+        let chosenVideo = _.find(prioritizedVideos, video => video.info.size <= _prefferedSongSizeLimitBytes);
         if (!chosenVideo) {
-            chosenVideo = _.find(videosBySizeDesc, video => video.info.size <= _maxSongSizeLimitBytes);
+            chosenVideo = _.find(prioritizedVideos, video => video.info.size <= _maxSongSizeLimitBytes);
         }
+
+        // stopUnnecessaryVideosDownloads(downloadingVideos, chosenVideo);
+
         if (!chosenVideo) {
             throw "All the results for the yt search are too large (larger then '" +
                 _maxSongSizeLimitBytes + "' configured)";
         }
 
         return Promise.resolve(chosenVideo);
+    }
 
-        // let bestQualityVideo = undefined;
-        // let bestQualityVideoSize = -1;
-        //
-        // _.each(videosDownload, function (videosDownload) {
-        //     if (videosDownload.info.size > bestQualityVideoSize) {
-        //         bestQualityVideo = videosDownload;
-        //         bestQualityVideoSize = videosDownload.info.size;
-        //     }
-        // });
-        //
-        // return Promise.resolve(bestQualityVideo);
+    function stopUnnecessaryVideosDownloads(downloadingVideos, chosenVideo) {
+        let downloadProcessesToStop = downloadingVideos;
+
+        if (chosenVideo) {
+            downloadProcessesToStop = _.without(downloadProcessesToStop, chosenVideo);
+        }
+
+        _.each(downloadProcessesToStop, proc => proc.kill('SIGINT'));
     }
 
     function durationStringToSeconds(durationString) {
@@ -222,12 +227,12 @@ module.exports = function () {
         return durationSeconds;
     }
 
-    function convertVideoToMp3AndOutputToDir(bestQualityVideo) {
+    function convertVideoToMp3AndOutputToDir(chosenVideo) {
 
-        const outputFilePath = _outputDir + '\\' + bestQualityVideo.info.title + '.mp3';
+        const outputFilePath = _outputDir + '\\' + chosenVideo.info.title + '.mp3';
         deletePreviousFileIfExists(outputFilePath);
 
-        const converter = new FfmpegCommand({source: bestQualityVideo.downloadEntry, stdoutLines:0});
+        const converter = new FfmpegCommand({source: chosenVideo.downloadEntry, stdoutLines:0});
 
         const FIX_WRONG_DURATION_FLAG = '-write_xing 0';
         converter
