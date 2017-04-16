@@ -195,24 +195,12 @@ module.exports = function () {
             chosenVideo = _.find(prioritizedVideos, video => video.info.size <= _maxSongSizeLimitBytes);
         }
 
-        // stopUnnecessaryVideosDownloads(downloadingVideos, chosenVideo);
-
         if (!chosenVideo) {
             throw "All the results for the yt search are too large (larger then '" +
                 _maxSongSizeLimitBytes + "' configured)";
         }
 
         return Promise.resolve(chosenVideo);
-    }
-
-    function stopUnnecessaryVideosDownloads(downloadingVideos, chosenVideo) {
-        let downloadProcessesToStop = downloadingVideos;
-
-        if (chosenVideo) {
-            downloadProcessesToStop = _.without(downloadProcessesToStop, chosenVideo);
-        }
-
-        _.each(downloadProcessesToStop, proc => proc.kill('SIGINT'));
     }
 
     function durationStringToSeconds(durationString) {

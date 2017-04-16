@@ -11,7 +11,8 @@ function adjustSpecialChars(songTile) {
 
     let adjustedSongTitle = songTile;
     for (let sc in MESSAGE_SPECIAL_CHARS_MAP) {
-        adjustedSongTitle = adjustedSongTitle.replace(sc, MESSAGE_SPECIAL_CHARS_MAP[sc]);
+        const replaceAllRX = new RegExp(sc, 'g');
+        adjustedSongTitle = adjustedSongTitle.replace(replaceAllRX, MESSAGE_SPECIAL_CHARS_MAP[sc]);
     }
 
     return adjustedSongTitle;
