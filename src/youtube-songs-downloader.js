@@ -105,20 +105,22 @@ module.exports = function () {
 
     // privates
     function downloadSong(songTitle, totalSongsCount) {
+        const adjustedSongTitle = progetUtils.adjustSongTitle(songTitle);
+
         console.log("Starting download song number " + _currentSongNumber +
-            " of " + totalSongsCount + ": '" + songTitle + "'"
+            " of " + totalSongsCount + ": '" + adjustedSongTitle + "'"
         );
         _currentSongNumber++;
 
-        let downloadChain = searchYtByTitle(songTitle)
+        let downloadChain = searchYtByTitle(adjustedSongTitle)
             .then(searchRes => mapResultsToYtVideosUrls(songTitle, searchRes))
             .then(startDownloadYtVideosUrls)
             .then(chooseVideoToDownload)
             .then(convertVideoToMp3AndOutputToDir)
-            .then(songFilePath => setSongMp3Tags(songTitle, songFilePath));
+            .then(songFilePath => setSongMp3Tags(adjustedSongTitle, songFilePath));
 
         if (_onSongDownloadedCallback) {
-            downloadChain = downloadChain.then(() => _onSongDownloadedCallback(songTitle));
+            downloadChain = downloadChain.then(() => _onSongDownloadedCallback(adjustedSongTitle));
         }
 
         downloadChain = downloadChain.then(() => {
@@ -132,7 +134,7 @@ module.exports = function () {
                 return Promise.resolve();
             }
             else {
-                return Promise.resolve(_onSongDownloadErrorCallback(songTitle, e));
+                return Promise.resolve(_onSongDownloadErrorCallback(adjustedSongTitle, e));
             }
         });
 
@@ -149,7 +151,7 @@ module.exports = function () {
 
     function startDownloadYtVideosUrls(videoUrls) {
         const videoDownloadPromises = [];
-        _.each(videoUrls, function (url) {
+        _.each(videoUrls, url => {
             const deff = deferred();
             videoDownloadPromises.push(deff.promise);
 
@@ -219,7 +221,7 @@ module.exports = function () {
     function convertVideoToMp3AndOutputToDir(chosenVideo) {
 
         // const outputFilePath = _outputDir + '\\' + chosenVideo.info.title + '.mp3';
-        const outputFileName = progetUtils.adjustSpecialChars(chosenVideo.info.title);
+        const outputFileName = progetUtils.adjustSongTitle(chosenVideo.info.title);
         const outputFilePath = path.join(_outputDir, outputFileName) + '.mp3';
         deletePreviousFileIfExists(outputFilePath);
 

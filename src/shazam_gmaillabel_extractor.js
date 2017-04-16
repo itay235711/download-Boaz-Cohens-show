@@ -93,7 +93,7 @@ module.exports = function () {
         }
         else {
             const songTitles =
-                titleExtractions.map(extrc => extrc.val).map(projectUtils.adjustSpecialChars);
+                titleExtractions.map(extrc => extrc.val).map(projectUtils.adjustSongTitle);
             return Promise.resolve(songTitles);
         }
     }
@@ -111,7 +111,7 @@ module.exports = function () {
 
     function markSongByTitle(songTitle, markingFunction) {
 
-        const adjustedSongTitle = projectUtils.adjustSpecialChars(songTitle);
+        const adjustedSongTitle = projectUtils.adjustSongTitle(songTitle);
         const messagesIds = _songTitleToMessageIdsMap[adjustedSongTitle];
 
         if (!messagesIds) {
@@ -194,7 +194,7 @@ module.exports = function () {
     // On theory song title can appear on multiple mails, so map array of ids instead of
     // just one. Practicably this array will contain only one id 99% of the times.
     function mapMessageToSongTitle(songTitle, messageData) {
-        const adjustedSongTitle = projectUtils.adjustSpecialChars(songTitle);
+        const adjustedSongTitle = projectUtils.adjustSongTitle(songTitle);
         if (_songTitleToMessageIdsMap[adjustedSongTitle]) {
             _songTitleToMessageIdsMap[adjustedSongTitle].push(messageData.id);
         }
