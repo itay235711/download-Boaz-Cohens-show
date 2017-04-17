@@ -293,6 +293,7 @@ module.exports = function () {
 
         const trackInfo = lastfmTrackInfoRes.track || {};
         retTags.title = trackInfo.name || songTitleDetails.name;
+        retTags.performerInfo = BOAZ_COHEN_ALBUM_ARTIST;
 
         if (trackInfo.artist)
             retTags.artist = trackInfo.artist.name;
@@ -416,6 +417,7 @@ module.exports = function () {
     const YOUTUBE_URL = 'https://www.youtube.com';
     const YOUTUBE_API_KEY = 'AIzaSyClAQoAKyT5YLldaOJ2l5mKlhFt76T7UkY';
     const FFMPEG_PATH = '.\\ffmpeg\\ffmpeg-20170112-6596b34-win64-static\\bin\\ffmpeg.exe';
+    const BOAZ_COHEN_ALBUM_ARTIST = "Boaz Cohen's show";
 
     return module;
 };
