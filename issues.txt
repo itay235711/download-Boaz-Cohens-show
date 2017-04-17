@@ -4,7 +4,9 @@ bugs:
     * still downloading some live versions (not sure how bad it is)
     * sometimes youtube-dl.exe still fails. Need to retry at least one time in this case
     * some albums create an empty file in their name in  the folder
+    * some songs are not found even though in yt site search they are found.
 
 not implemented yet:
+    * normal installation for ffmpeg dir
     * sending mails on failures
     * upload new songs to the drive (and delete old ones weekly)

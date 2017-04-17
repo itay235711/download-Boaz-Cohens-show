@@ -72,8 +72,6 @@ module.exports = function () {
             return Promise.reject(new Error("'songsList' must be an array"));
         }
         else {
-            // cleanOutputDir();
-
             let currentPromise = Promise.resolve();
             for (let i = 0; i < songsList.length; i++) {
                 const songTitle = songsList[i];
@@ -139,14 +137,6 @@ module.exports = function () {
         });
 
         return downloadChain;
-    }
-
-    function cleanOutputDir() {
-        files = fs.readdirSync(_outputDir);
-
-        for (const file of files) {
-            fs.unlinkSync(path.join(_outputDir, file));
-        }
     }
 
     function startDownloadYtVideosUrls(videoUrls) {
@@ -220,7 +210,6 @@ module.exports = function () {
 
     function convertVideoToMp3AndOutputToDir(chosenVideo) {
 
-        // const outputFilePath = _outputDir + '\\' + chosenVideo.info.title + '.mp3';
         const outputFileName = progetUtils.adjustSongTitle(chosenVideo.info.title);
         const outputFilePath = path.join(_outputDir, outputFileName) + '.mp3';
         deletePreviousFileIfExists(outputFilePath);
@@ -283,11 +272,11 @@ module.exports = function () {
                 track: songTitleDetails.val.name,
                 artist: songTitleDetails.val.artist,
                 handlers: {
-                    success: function (response) {
+                    success: response => {
                         parseLastfmTrackInfoToMp3Tags(response, songTitleDetails.val)
                             .then(trackTags => def.resolve(trackTags));
                     },
-                    error: function (error) {
+                    error: err => {
                         parseLastfmTrackInfoToMp3Tags({}, songTitleDetails.val)
                             .then(defaultTags => def.resolve(defaultTags));
                     }
@@ -320,13 +309,14 @@ module.exports = function () {
                 retTags.trackNumber = trackInfo.album["@attr"].position;
             }
 
-            retPromise = fetchImageToTag(trackInfo, retPromise, retTags);
+            retPromise = fetchImageToTag(trackInfo, retTags);
         }
 
         return retPromise;
     }
 
-    function fetchImageToTag(trackInfo, retPromise, retTags) {
+    function fetchImageToTag(trackInfo, retTags) {
+        let retPromise = Promise.resolve(retTags);
         if (!Array.isArray(trackInfo.album.image)) {
             throw new Error('Expected array of images info, received ' +
                 typeof trackInfo.album.image);
@@ -338,16 +328,13 @@ module.exports = function () {
 
             if (largeImageLink) {
 
-                const def = deferred();
-                retPromise = def.promise;
-
-                const albumImageTempPath = _outputDir + '\\' + retTags.album + '.png';
-                downloadFile(largeImageLink["#text"], albumImageTempPath,
-                    function success() {
+                const albumImageTempPath = path.join(_outputDir, retTags.album) + '.png';
+                retPromise = downloadFile(largeImageLink["#text"], albumImageTempPath)
+                    .then(() => {
                         retTags.image = albumImageTempPath;
-                        def.resolve(retTags);
-                    },
-                    function error(err) {
+                        return retTags;
+                    })
+                    .catch(err => {
                         console.warn("WARNING: failed downloading image for the album: '" +
                             retTags.album + "'. The  error:\n" + err);
 
@@ -355,11 +342,12 @@ module.exports = function () {
                             fs.unlinkSync(albumImageTempPath);
                         }
 
-                        def.resolve(retTags)
+                        return retTags;
                     }
                 );
             }
         }
+
         return retPromise;
     }
 
@@ -404,11 +392,16 @@ module.exports = function () {
         return ret;
     }
 
-    function downloadFile(uri, filename, callback, errorHandler){
+    function downloadFile(uri, filename){
+
+        const def = deferred();
         webRequest.head(uri, () =>
             webRequest(uri).pipe(fs.createWriteStream(filename))
-                .on('close', callback).on('error', errorHandler)
+                .on('close', def.resolve)
+                .on('error', def.reject)
         );
+
+        return def.promise;
     }
 
     // members
@@ -434,13 +427,9 @@ function initCallbacksBehavior() {
     fs.writeFile = denodeify(fs.writeFile, Promise, false);
 
     YoutubeApi = function () {
-        const apiInstace = new (require("youtube-node"))();
-        apiInstace.search = denodeify(apiInstace.search, Promise, false);
+        const apiInstance = new (require("youtube-node"))();
+        apiInstance.search = denodeify(apiInstance.search, Promise, false);
 
-        return apiInstace;
+        return apiInstance;
     };
-
-    // Promise.onPossiblyUnhandledRejection(function(error){
-    //     throw error;
-    // });
 }
