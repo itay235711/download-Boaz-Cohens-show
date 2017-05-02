@@ -160,7 +160,7 @@ module.exports = function () {
     }
 
     function startNewDownload(url) {
-        return youtubeDl(url, ['--format=18'], {cwd: __dirname, maxBuffer: Infinity});
+        return youtubeDl(url, ['--format=18', '--verbose'], {cwd: __dirname, maxBuffer: Infinity});
     }
 
     function mapResultsToYtVideosUrls(songTitle, searchRes) {
