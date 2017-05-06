@@ -13,7 +13,7 @@ const denodeify = require('promise-denodeify');
 
 initCallbacksBehavior();
 
-module.exports = function () {
+module.exports = function (_googleUser) {
 
     const module = {
         extractShazamLabelNewSongTitles: extractShazamLabelNewSongTitles,
@@ -22,18 +22,6 @@ module.exports = function () {
     };
 
     // public
-    function getAuthInstance() {
-        if (_authInstance) {
-            return Promise.resolve(_authInstance);
-        }
-        else {
-            return aoth_authenticator.authenticate().then(auth => {
-                _authInstance = auth;
-                return Promise.resolve(auth);
-            });
-        }
-    }
-
     function extractShazamLabelNewSongTitles() {
         return queryNewShazamLabelMessages()
             .then(response => {
@@ -62,6 +50,18 @@ module.exports = function () {
     }
 
     // private
+    function getAuthInstance() {
+        if (_authInstance) {
+            return Promise.resolve(_authInstance);
+        }
+        else {
+            return aoth_authenticator.authenticate(_googleUser).then(auth => {
+                _authInstance = auth;
+                return Promise.resolve(auth);
+            });
+        }
+    }
+
     function queryNewShazamLabelMessages() {
         return getAuthInstance().then(auth => {
             return gmail.users.messages.list({
