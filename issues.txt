@@ -5,6 +5,7 @@ bugs:
     * sometimes youtube-dl.exe still fails. Need to retry at least one time in this case
     * some albums create an empty file in their name in  the folder
     * some songs are not found even though in yt site search they are found.
+    * creating dirs inside the output folder will make the uploader to crash (it is that stupid)
 
 not implemented yet:
     * normal installation for ffmpeg dir
