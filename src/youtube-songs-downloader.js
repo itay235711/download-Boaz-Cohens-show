@@ -13,7 +13,7 @@ const FfmpegCommand = require('fluent-ffmpeg');
 const nodeID3 = require('node-id3');
 const LastFmNode = require('lastfm').LastFmNode;
 const merge = require('merge');
-const progetUtils = require('./utils.js');
+const projectUtils = require('./utils.js');
 const webRequest = require('request').defaults({ encoding: null });
 
 initCallbacksBehavior();
@@ -32,11 +32,7 @@ module.exports = function () {
 
     // public
     function setOutputDir(outputDirPath) {
-        if (!fs.existsSync(outputDirPath)){
-            fs.mkdirSync(outputDirPath);
-        }
         _outputDir = outputDirPath;
-
         return module;
     }
 
@@ -103,7 +99,7 @@ module.exports = function () {
 
     // privates
     function downloadSong(songTitle, totalSongsCount) {
-        const adjustedSongTitle = progetUtils.adjustSongTitle(songTitle);
+        const adjustedSongTitle = projectUtils.adjustSongTitle(songTitle);
 
         console.log("Starting download song number " + _currentSongNumber +
             " of " + totalSongsCount + ": '" + adjustedSongTitle + "'"
@@ -210,7 +206,7 @@ module.exports = function () {
 
     function convertVideoToMp3AndOutputToDir(chosenVideo) {
 
-        const outputFileName = progetUtils.adjustSongTitle(chosenVideo.info.title);
+        const outputFileName = projectUtils.adjustSongTitle(chosenVideo.info.title);
         const outputFilePath = path.join(_outputDir, outputFileName) + '.mp3';
         deletePreviousFileIfExists(outputFilePath);
 

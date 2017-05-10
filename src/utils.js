@@ -1,8 +1,19 @@
 /**
  * Created by itay on 4/16/2017.
  */
+const Promise = require("bluebird");
+const path = require('path');
+const fs = require('fs');
+const fsExtra = require('fs-extra')
+const denodeify = require('promise-denodeify');
+
+initCallbacksBehavior();
 
 module.exports.adjustSongTitle = adjustSongTitle;
+module.exports.getTodayFsFriendlyName = getTodayFsFriendlyName;
+module.exports.createDirIfNotExists = createDirIfNotExists;
+module.exports.moveFileToDir = moveFileToDir;
+
 
 function adjustSongTitle(songTile) {
     let adjustedSongTitle = adjustSpecialChars(songTile);
@@ -23,14 +34,45 @@ function adjustSpecialChars(songTile) {
 
 function removeParenthesisParts(adjustedSongTitle) {
 
-    if (adjustedSongTitle.indexOf('Savages') != -1) {
-        var x = 1;
-    }
-
     const rx = new RegExp("\\(.*?\\)", 'g');
     const ret = adjustedSongTitle.replace(rx, "");
 
     return ret;
+}
+
+function getTodayFsFriendlyName() {
+
+    const todaysDate = new Date();
+    const mm = todaysDate.getMonth() + 1; // getMonth() is zero-based
+    const dd = todaysDate.getDate();
+
+    const retDateStr = [
+        (mm>9 ? '' : '0') + mm,
+        (dd>9 ? '' : '0') + dd,
+        todaysDate.getFullYear()
+    ].join('_');
+
+    return retDateStr;
+}
+
+function createDirIfNotExists(dirPath) {
+
+    let created = false;
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath);
+        created = true;
+    }
+
+    return Promise.resolve(created);
+}
+
+function moveFileToDir(originalFilePath, newDirPath) {
+
+    const fileName = path.basename(originalFilePath);
+    const newFullPath = path.join(newDirPath, fileName);
+    const retPromise = fsExtra.move(originalFilePath, newFullPath);
+
+    return retPromise;
 }
 
 const MESSAGE_SPECIAL_CHARS_MAP = {
@@ -41,3 +83,7 @@ const MESSAGE_SPECIAL_CHARS_MAP = {
     "\/":"",
     "\\|":""
 };
+
+function initCallbacksBehavior() {
+    fsExtra.move = denodeify(fsExtra.move , Promise, false);
+}

@@ -4,10 +4,14 @@
 
 const fs = require('fs');
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
+//noinspection JSUnresolvedFunction
 const drive = require('googleapis').drive('v3');
 const denodeify = require('promise-denodeify');
 const path = require('path');
 const _ = require('underscore-node');
+const projectUtils = require('./utils.js');
+const Promise = require("bluebird");
+
 
 initCallbacksBehavior();
 
@@ -19,20 +23,26 @@ module.exports = function (_googleUser) {
     // public
     function uploadSongsDirToDrive(songsDir) {
 
-        return fs.readdir(songsDir).then(songFiles => {
-            let uploadsChainPromise = Promise.resolve();
+        const uploadedSongsInnerDir = path.join(songsDir, '/uploaded');
 
-            _.forEach(songFiles, (songFileName, i) => {
-                const fileFullPath = path.join(songsDir, songFileName);
+        return fs.readdir(songsDir)
+            .then(dirEntriesNames => {
+                let uploadsChainPromise = Promise.resolve();
 
-                uploadsChainPromise = uploadsChainPromise
-                    .then(() => logSongUploadIter(i, songFiles, songFileName))
-                    .then(getOrCreateDirForToday)
-                    .then(todaysDirId => uploadSong(todaysDirId, fileFullPath));
+                const dirEntries = dirEntriesNames.map(name => { return {name:name, fullPath:path.join(songsDir, name)}; });
+                const songFiles = dirEntries.filter(entry => fs.statSync(entry.fullPath).isFile());
+                songFiles.forEach((songFile, i) => {
+
+                    uploadsChainPromise = uploadsChainPromise
+                        .then(() => projectUtils.createDirIfNotExists(uploadedSongsInnerDir))
+                        .then(() => logSongUploadIter(i, songFiles, songFile.name))
+                        .then(getOrCreateDirForToday)
+                        .then(todaysDirId => uploadSong(todaysDirId, songFile.fullPath))
+                        .then(() => projectUtils.moveFileToDir(songFile.fullPath, uploadedSongsInnerDir));
+                });
+
+                return uploadsChainPromise;
             });
-
-            return uploadsChainPromise;
-        });
     }
 
     // private
@@ -50,7 +60,7 @@ module.exports = function (_googleUser) {
 
     function getOrCreateDirForToday() {
         return getAuthInstance().then(auth => {
-            const todaysDirName = getTodayDirName();
+            const todaysDirName = projectUtils.getTodayFsFriendlyName();
 
             return drive.files.list({
                 auth: auth,
@@ -98,21 +108,6 @@ module.exports = function (_googleUser) {
                 }
             });
         });
-    }
-
-    function getTodayDirName() {
-
-        const todaysDate = new Date();
-        const mm = todaysDate.getMonth() + 1; // getMonth() is zero-based
-        const dd = todaysDate.getDate();
-
-        const retDateStr = [
-            (mm>9 ? '' : '0') + mm,
-            (dd>9 ? '' : '0') + dd,
-            todaysDate.getFullYear()
-        ].join('_');
-
-        return retDateStr;
     }
 
     function getTodaysDirQuery(todaysDirName) {

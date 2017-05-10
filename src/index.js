@@ -9,6 +9,15 @@ const ysd = require('./youtube-songs-downloader.js')();
 const extractor = require('./shazam_gmaillabel_extractor.js')(_mailGoogleUser);
 const driveUploader = require('./songs_drive_uploader.js')(_driveGoogleUser);
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
+const fs = require('fs');
+const path = require('path');
+const projectUtils = require('./utils.js');
+const cp = require('child_process');
+const Promise = require("bluebird");
+const denodeify = require('promise-denodeify');
+
+initCallbacksBehavior();
+
 
 downloadShazamNewSongs();
 
@@ -16,9 +25,11 @@ function downloadShazamNewSongs() {
 
 
     extractor.extractShazamLabelNewSongTitles().then(songTitles =>{
-        const outputDirPath = 'C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\newer\\';
+        const mainOutputDir = 'C:\\Users\\itay\\home\\7_temp\\boazTestsDir\\';
 
-        ysd.setOutputDir(outputDirPath)
+        const todaysOutputDir = createTodaysOutputDir(mainOutputDir);
+
+        ysd.setOutputDir(todaysOutputDir)
             .setMaxYtSearchResultsNumber(3)
             .setMaxSongDurationMinutes(30)
             .setMaxSongFileSizeOptions({ prefferedSizeLimitMB: 50, maxSizeLimitMB: 80});
@@ -27,7 +38,8 @@ function downloadShazamNewSongs() {
         ysd.assignOnSongDownloadError(extractor.markMessageAsProblematicBySongTitle);
 
         ysd.downloadSongsList(songTitles)
-            .then(() => driveUploader.uploadSongsDirToDrive(outputDirPath))
+            .then(() => cp.exec('start "" "' + todaysOutputDir + '"'))
+            .then(() => driveUploader.uploadSongsDirToDrive(todaysOutputDir))
             .then(() => {
             console.log('done.');
             process.exit(0);
@@ -58,4 +70,15 @@ function testSongsDownloader() {
         console.log(err);
         process.exit(1);
     });
+}
+
+function createTodaysOutputDir(outputDirPath) {
+    const outputTodaysDir = path.join(outputDirPath, projectUtils.getTodayFsFriendlyName());
+    projectUtils.createDirIfNotExists(outputTodaysDir);
+
+    return outputTodaysDir;
+}
+
+function initCallbacksBehavior() {
+    cp.exec = denodeify(cp.exec, Promise, false);
 }
