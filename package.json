@@ -13,6 +13,8 @@
     "dateformat": "^2.0.0",
     "deferred": "^0.7.5",
     "fluent-ffmpeg": "^2.1.0",
+    "fs-extra": "^3.0.1",
+    "googleapis": "latest",
     "lastfm": "^0.9.2",
     "merge": "^1.2.0",
     "moment": "^2.18.1",
