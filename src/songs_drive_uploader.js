@@ -24,6 +24,7 @@ module.exports = function (_googleUser) {
     function uploadSongsDirToDrive(songsDir) {
 
         const uploadedSongsInnerDir = path.join(songsDir, '/uploaded');
+        const uploadDirName = path.parse(songsDir).name;
 
         return fs.readdir(songsDir)
             .then(dirEntriesNames => {
@@ -36,7 +37,7 @@ module.exports = function (_googleUser) {
                     uploadsChainPromise = uploadsChainPromise
                         .then(() => projectUtils.createDirIfNotExists(uploadedSongsInnerDir))
                         .then(() => logSongUploadIter(i, songFiles, songFile.name))
-                        .then(getOrCreateDirForToday)
+                        .then(() => getOrCreateDriveDir(uploadDirName))
                         .then(todaysDirId => uploadSong(todaysDirId, songFile.fullPath))
                         .then(() => projectUtils.moveFileToDir(songFile.fullPath, uploadedSongsInnerDir));
                 });
@@ -58,14 +59,13 @@ module.exports = function (_googleUser) {
         }
     }
 
-    function getOrCreateDirForToday() {
+    function getOrCreateDriveDir(dirName) {
         return getAuthInstance().then(auth => {
-            const todaysDirName = projectUtils.getTodayFsFriendlyName();
 
             return drive.files.list({
                 auth: auth,
                 userId: 'me',
-                q: getTodaysDirQuery(todaysDirName),
+                q: getDirNameQuery(dirName),
                 spaces: 'drive'
             }).then(res => {
 
@@ -78,7 +78,7 @@ module.exports = function (_googleUser) {
                         userId: 'me',
                         fields: 'id',
                         resource: {
-                            'name': todaysDirName,
+                            'name': dirName,
                             'mimeType': 'application/vnd.google-apps.folder'
                         }
                     });
@@ -110,9 +110,9 @@ module.exports = function (_googleUser) {
         });
     }
 
-    function getTodaysDirQuery(todaysDirName) {
+    function getDirNameQuery(dirName) {
         return "mimeType = 'application/vnd.google-apps.folder' and " +
-            "name='" + todaysDirName + "' and " +
+            "name='" + dirName + "' and " +
             "'root' in parents and " +
             "trashed = false";
     }
