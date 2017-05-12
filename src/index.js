@@ -26,10 +26,10 @@ const runConfig = extractConfigFromAppArgs();
 
 switch (runConfig.mode) {
     case 'input_file':
-        downloadSongTitlesFromFile(runConfig.file_path);
+        downloadSongTitlesFromFile(runConfig.file_path, runConfig.drive_upload);
         break;
     case 'single_title':
-        downloadSongTitles([runConfig.title], MAIN_OUTPUT_DIR);
+        downloadSongTitles([runConfig.title], MAIN_OUTPUT_DIR, false);
         break;
     case 'yedidyas_shazam':
         downloadShazamNewSongs();
@@ -42,16 +42,18 @@ function extractConfigFromAppArgs() {
     const runConfig = {};
 
     runConfig.mode = optimist
-        .usage('Usage: node $0 --mode=[run mode]')
+        .usage('Usage: node $0 --mode=[input_file|single_title|yedidyas_shazam]')
         .demand(['mode'])
         .argv.mode;
 
     switch (runConfig.mode) {
         case 'input_file':
-            runConfig.file_path = optimist
-                .usage('Usage: node $0 --mode=input_file --file_path=[path to input file]')
-                .demand(['file_path'])
-                .argv.file_path;
+            const demandedArgv = optimist
+                .usage('Usage: node $0 --mode=input_file --file_path=[path to input file] --drive_upload=[true|false]')
+                .demand(['file_path', 'drive_upload'])
+                .argv;
+            runConfig.file_path = demandedArgv.file_path;
+            runConfig.drive_upload = demandedArgv.drive_upload == true;
             break;
         case 'single_title':
             runConfig.title = optimist
@@ -68,7 +70,7 @@ function extractConfigFromAppArgs() {
     return runConfig;
 }
 
-function downloadSongTitles(songTitles, outputDir) {
+function downloadSongTitles(songTitles, outputDir, uploadToDrive) {
 
     const ysd = initNewYsdWithDefaults();
     ysd.setOutputDir(outputDir);
@@ -76,18 +78,22 @@ function downloadSongTitles(songTitles, outputDir) {
     projectUtils.createDirIfNotExists(outputDir)
         .then(() => ysd.downloadSongsList(songTitles))
         .then(() => {
-            cp.exec('start "" "' + outputDir + '"', () => {
-                    console.log('done.');
-                    process.exit(0);
-                }
-            );
-    }).catch(err => {
-        console.log(err);
-        process.exit(1);
+            if (uploadToDrive) {
+                return driveUploader.uploadSongsDirToDrive(outputDir);
+            }
+        })
+        .then(() => openWinExplorer(outputDir))
+        .then(() => {
+            console.log('done.');
+            process.exit(0);
+        })
+        .catch(err => {
+            console.log(err);
+            process.exit(1);
     });
 }
 
-function downloadSongTitlesFromFile(inputFilePath) {
+function downloadSongTitlesFromFile(inputFilePath, uploadToDrive) {
     const songTitles = [];
 
     lineReader.eachLine(inputFilePath, line => {
@@ -100,7 +106,7 @@ function downloadSongTitlesFromFile(inputFilePath) {
 
         const fileName = path.parse(inputFilePath).name;
         const outputDirPath = path.join(MAIN_OUTPUT_DIR, '\\', fileName);
-        downloadSongTitles(songTitles, outputDirPath);
+        downloadSongTitles(songTitles, outputDirPath, uploadToDrive);
     });
 }
 
@@ -117,7 +123,7 @@ function downloadShazamNewSongs() {
         ysd.assignOnSongDownloadError(extractor.markMessageAsProblematicBySongTitle);
 
         ysd.downloadSongsList(songTitles)
-            .then(() => cp.exec('start "" "' + todaysOutputDir + '"'))
+            .then(() => openWinExplorer(todaysOutputDir))
             .then(() => driveUploader.uploadSongsDirToDrive(todaysOutputDir))
             .then(() => {
             console.log('done.');
@@ -165,6 +171,10 @@ function createTodaysOutputDir(outputDirPath) {
     projectUtils.createDirIfNotExists(outputTodaysDir);
 
     return outputTodaysDir;
+}
+
+function openWinExplorer(dirPath) {
+    return cp.exec('start "" "' + dirPath + '"');
 }
 
 function initCallbacksBehavior() {

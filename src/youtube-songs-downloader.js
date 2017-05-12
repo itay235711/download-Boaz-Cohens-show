@@ -164,10 +164,7 @@ module.exports = function () {
             throw new Error("Did not find results searching '"+ songTitle + "'");
         }
 
-        const videoUrls = _.map(searchRes.items, function (itm) {
-            const url = formatVideoUrl(itm.id.videoId);
-            return url;
-        });
+        const videoUrls = searchRes.items.map(itm => formatVideoUrl(itm.id.videoId));
 
         return Promise.resolve(videoUrls);
     }
@@ -289,7 +286,7 @@ module.exports = function () {
 
         const trackInfo = lastfmTrackInfoRes.track || {};
         retTags.title = trackInfo.name || songTitleDetails.name;
-        retTags.performerInfo = BOAZ_COHEN_ALBUM_ARTIST;
+        retTags.performerInfo = path.parse(_outputDir).name;
 
         if (trackInfo.artist)
             retTags.artist = trackInfo.artist.name;
@@ -330,7 +327,7 @@ module.exports = function () {
                     .then(() => {
                         retTags.image = albumImageTempPath;
                         return retTags;
-                    })
+                      })
                     .catch(err => {
                         console.warn("WARNING: failed downloading image for the album: '" +
                             retTags.album + "'. The  error:\n" + err);
@@ -374,8 +371,12 @@ module.exports = function () {
     function parseSongTitleDetails(songTitle) {
         const ret = {};
 
-        const detailsArray = songTitle.split('by');
-        if (detailsArray.length == 1) {
+        let detailsArray = songTitle.split('by');
+        if (detailsArray.length === 1) {
+            detailsArray = songTitle.split('-');
+        }
+
+        if (detailsArray.length === 1) {
             ret.parsingFailed = true;
         }
         else {
@@ -413,7 +414,6 @@ module.exports = function () {
     const YOUTUBE_URL = 'https://www.youtube.com';
     const YOUTUBE_API_KEY = 'AIzaSyClAQoAKyT5YLldaOJ2l5mKlhFt76T7UkY';
     const FFMPEG_PATH = '.\\ffmpeg\\ffmpeg-20170112-6596b34-win64-static\\bin\\ffmpeg.exe';
-    const BOAZ_COHEN_ALBUM_ARTIST = "Boaz Cohen's show";
 
     return module;
 };
