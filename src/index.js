@@ -53,7 +53,7 @@ function extractConfigFromAppArgs() {
                 .demand(['file_path', 'drive_upload'])
                 .argv;
             runConfig.file_path = demandedArgv.file_path;
-            runConfig.drive_upload = demandedArgv.drive_upload == true;
+            runConfig.drive_upload = demandedArgv.drive_upload == 'true';
             break;
         case 'single_title':
             runConfig.title = optimist
