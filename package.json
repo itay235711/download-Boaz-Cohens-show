@@ -2,10 +2,11 @@
   "name": "download_boaz_cohens_show",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "node post_install.js"
+    "shazam": "node src/index.js --mode=yedidyas_shazam",
+    "download_file": "node src/index.js --mode=input_file --drive_upload=false"
   },
   "author": "",
   "license": "ISC",
@@ -23,6 +24,9 @@
     "node-id3": "0.0.9",
     "optimist": "^0.6.1",
     "phantom": "^4.0.0",
+    "progress": "^2.0.0",
+    "progress-stream": "^2.0.0",
+    "progressbar": "^1.1.1",
     "promise": "^7.1.1",
     "promise-denodeify": "^1.2.2",
     "underscore-node": "^0.1.2",

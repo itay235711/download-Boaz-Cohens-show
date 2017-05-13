@@ -15,6 +15,8 @@ const LastFmNode = require('lastfm').LastFmNode;
 const merge = require('merge');
 const projectUtils = require('./utils.js');
 const webRequest = require('request').defaults({ encoding: null });
+const progressStream = require('progress-stream');
+const ProgressBar = require('progress');
 
 initCallbacksBehavior();
 
@@ -207,7 +209,9 @@ module.exports = function () {
         const outputFilePath = path.join(_outputDir, outputFileName) + '.mp3';
         deletePreviousFileIfExists(outputFilePath);
 
-        const converter = new FfmpegCommand({source: chosenVideo.downloadEntry, stdoutLines:0});
+        const progressBarPipe = displayProgressBarPipe('downloading', chosenVideo.info.size);
+        const downloadPipe = chosenVideo.downloadEntry.pipe(progressBarPipe);
+        const converter = new FfmpegCommand({source: downloadPipe, stdoutLines:0});
 
         const FIX_WRONG_DURATION_FLAG = '-write_xing 0';
         converter
@@ -400,6 +404,29 @@ module.exports = function () {
         );
 
         return def.promise;
+    }
+
+    function displayProgressBarPipe(actionName, totalLength) {
+        const displayTemplate = actionName + ' [:bar] :percent :etas';
+        const processBar = new ProgressBar(displayTemplate, {
+            complete: '=',
+            incomplete: ' ',
+            width: 20,
+            total: 100
+        });
+
+        const progressBarPipe = progressStream({
+                length: totalLength,
+                time: 100
+            },
+            progresion => {
+                if (!processBar.complete) {
+                    processBar.tick(progresion.percentage);
+                }
+            }
+        );
+
+        return progressBarPipe;
     }
 
     // members
