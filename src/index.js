@@ -58,7 +58,7 @@ function extractConfigFromAppArgs() {
         case 'single_title':
             runConfig.title = optimist
                 .usage('Usage: node $0 --mode=single_title --title=[song title]')
-                .demand(['file_path'])
+                .demand(['title'])
                 .argv.title;
             break;
         case 'yedidyas_shazam':
