@@ -6,8 +6,8 @@ const _mailGoogleUser = 'itay235711';
 const _driveGoogleUser = 'SongsSharer2';
 
 const newYsd = require('./youtube-songs-downloader.js');
-const extractor = require('./shazam_gmaillabel_extractor.js')(_mailGoogleUser);
-const driveUploader = require('./songs_drive_uploader.js')(_driveGoogleUser);
+const extractor = require('./shazam-gmaillabel-extractor.js')(_mailGoogleUser);
+const driveUploader = require('./songs-drive-uploader.js')(_driveGoogleUser);
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
 const fs = require('fs');
 const path = require('path');
