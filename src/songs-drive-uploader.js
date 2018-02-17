@@ -5,7 +5,7 @@
 const fs = require('fs');
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
 //noinspection JSUnresolvedFunction
-const drive = require('googleapis').drive('v3');
+const drive = require('googleapis').google.drive('v3');
 const denodeify = require('promise-denodeify');
 const path = require('path');
 const _ = require('underscore-node');

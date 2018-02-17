@@ -3,7 +3,7 @@
  */
 
 const projectUtils = require('./utils.js');
-const gmail = require('googleapis').gmail('v1');
+const gmail = require('googleapis').google.gmail('v1');
 const aoth_authenticator = require('./google_api/aoth_authenticator.js');
 const moment = require('moment');
 const _ = require('underscore-node');
